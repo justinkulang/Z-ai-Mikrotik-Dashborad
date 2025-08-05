@@ -38,6 +38,8 @@ export async function GET(
   }
 }
 
+import bcrypt from 'bcryptjs'
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -65,7 +67,9 @@ export async function PUT(
 
     const updateData: any = {}
     if (username !== undefined) updateData.username = username
-    if (password !== undefined) updateData.password = password
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 12)
+    }
     if (name !== undefined) updateData.name = name
     if (email !== undefined) updateData.email = email
     if (phone !== undefined) updateData.phone = phone
