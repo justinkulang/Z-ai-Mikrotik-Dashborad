@@ -26,14 +26,20 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        // For demo purposes, we'll use plain password comparison
-        // In production, you should use proper password hashing
-        const isPasswordValid = credentials.password === "admin123" || 
-                               await bcrypt.compare(credentials.password, user.password || "")
+        console.log("Authorizing user:", credentials.email);
+        if (!user.password) {
+          console.log("User has no password set");
+          return null;
+        }
+
+        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
         if (!isPasswordValid) {
+          console.log("Invalid password");
           return null
         }
+
+        console.log("Password is valid");
 
         return {
           id: user.id,
