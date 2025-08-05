@@ -38,97 +38,103 @@ model Router {
 
   sessions    Session[]
   plans       Plan[]
-  
+
   @@map("routers")
 }
 
 model Plan {
-  id          String   @id @default(cuid())
-  name        String
-  price       Float
-  duration    Int      // in minutes
-  dataLimit   Int?     // in MB
-  speedLimit  String?  // e.g., "1M/1M"
-  description String?
-  isActive    Boolean  @default(true)
-  routerId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  price         Float
+  duration      Int // in minutes
+  dataLimit     Int? // in MB
+  speedLimit    String? // e.g., "1M/1M"
+  description   String?
+  isActive      Boolean  @default(true)
+  routerId      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  router      Router   @relation(fields: [routerId], references: [id])
-  vouchers    Voucher[]
-  hotspotUsers HotspotUser[]
-  
+  router        Router   @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  vouchers      Voucher[]
+  hotspotUsers  HotspotUser[]
+
+  @@index([routerId])
   @@map("plans")
 }
 
 model HotspotUser {
-  id          String   @id @default(cuid())
-  username    String   @unique
-  password    String
-  name        String?
-  email       String?
-  phone       String?
-  planId      String?
-  isActive    Boolean  @default(true)
-  expiresAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String    @id @default(cuid())
+  username      String    @unique
+  password      String
+  name          String?
+  email         String?
+  phone         String?
+  planId        String?
+  isActive      Boolean   @default(true)
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  plan        Plan?    @relation(fields: [planId], references: [id])
-  sessions    Session[]
-  
+  plan          Plan?     @relation(fields: [planId], references: [id], onDelete: SetNull)
+  sessions      Session[]
+
+  @@index([planId])
   @@map("hotspot_users")
 }
 
 model Voucher {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  planId      String
-  isUsed      Boolean  @default(false)
-  usedBy      String?
-  usedAt      DateTime?
-  expiresAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  code      String   @unique
+  planId    String
+  isUsed    Boolean  @default(false)
+  usedBy    String?
+  usedAt    DateTime?
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  plan        Plan     @relation(fields: [planId], references: [id])
-  
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
   @@map("vouchers")
 }
 
 model Session {
-  id             String   @id @default(cuid())
-  hotspotUserId  String
-  routerId       String
-  sessionId      String
-  ipAddress      String
-  macAddress     String
-  startTime      DateTime
-  endTime        DateTime?
-  uploadBytes    Int      @default(0)
-  downloadBytes  Int      @default(0)
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String    @id @default(cuid())
+  hotspotUserId String
+  routerId      String
+  sessionId     String
+  ipAddress     String
+  macAddress    String
+  startTime     DateTime
+  endTime       DateTime?
+  uploadBytes   Int       @default(0)
+  downloadBytes Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  hotspotUser    HotspotUser @relation(fields: [hotspotUserId], references: [id])
-  router         Router      @relation(fields: [routerId], references: [id])
-  usageStats     UsageStat[]
-  
+  hotspotUser   HotspotUser @relation(fields: [hotspotUserId], references: [id], onDelete: Cascade)
+  router        Router    @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  usageStats    UsageStat[]
+
+  @@index([hotspotUserId])
+  @@index([routerId])
   @@map("sessions")
 }
 
 model UsageStat {
-  id             String   @id @default(cuid())
-  sessionId      String
-  date           DateTime @default(now())
-  uploadBytes    Int      @default(0)
-  downloadBytes  Int      @default(0)
-  duration       Int      @default(0) // in seconds
-  createdAt      DateTime @default(now())
+  id            String   @id @default(cuid())
+  sessionId     String
+  date          DateTime @default(now())
+  uploadBytes   Int      @default(0)
+  downloadBytes Int      @default(0)
+  duration      Int      @default(0) // in seconds
+  createdAt     DateTime @default(now())
 
-  session        Session  @relation(fields: [sessionId], references: [id])
-  
+  session       Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
   @@map("usage_stats")
 }
