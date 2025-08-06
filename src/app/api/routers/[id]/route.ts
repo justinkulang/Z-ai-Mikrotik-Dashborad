@@ -95,6 +95,8 @@ export async function GET(
   }
 }
 
+import bcrypt from 'bcryptjs'
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -124,7 +126,9 @@ export async function PUT(
     if (name !== undefined) updateData.name = name
     if (ipAddress !== undefined) updateData.ipAddress = ipAddress
     if (username !== undefined) updateData.username = username
-    if (password !== undefined) updateData.password = password
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 12)
+    }
     if (apiPort !== undefined) updateData.apiPort = apiPort
     if (isActive !== undefined) updateData.isActive = isActive
 

@@ -1,3 +1,5 @@
+import { RouterOSAPIv2 } from 'node-routeros-v2';
+
 // MikroTik RouterOS API Client
 // This service handles communication with MikroTik routers
 
@@ -10,7 +12,7 @@ export interface MikrotikConnection {
 
 export interface MikrotikHotspotUser {
   name: string
-  password: string
+  password?: string
   profile?: string
   uptime?: string
   bytesIn?: number
@@ -20,6 +22,7 @@ export interface MikrotikHotspotUser {
   macAddress?: string
   loginBy?: string
   address?: string
+  '.id'?: string;
 }
 
 export interface MikrotikHotspotProfile {
@@ -30,6 +33,7 @@ export interface MikrotikHotspotProfile {
   keepaliveTimeout?: string
   statusAutorefresh?: string
   addMacCookie?: string
+  '.id'?: string;
 }
 
 export interface MikrotikHotspotServer {
@@ -77,43 +81,52 @@ export interface MikrotikSystemResource {
 }
 
 export class MikrotikAPI {
-  private connection: MikrotikConnection
+  private client: RouterOSAPIv2;
 
   constructor(connection: MikrotikConnection) {
-    this.connection = connection
+    this.client = new RouterOSAPIv2({
+        host: connection.host,
+        user: connection.username,
+        password: connection.password,
+        port: connection.port,
+        tls: false, // You might want to make this configurable
+    });
+  }
+
+  private async connect(): Promise<void> {
+    if (!this.client.connected) {
+        await this.client.connect();
+    }
+  }
+
+  private async disconnect(): Promise<void> {
+      if (this.client.connected) {
+          await this.client.close();
+      }
+  }
+
+  private formatParams(params: Record<string, any>): string[] {
+    return Object.entries(params)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => `=${key}=${value}`);
   }
 
   /**
    * Test connection to MikroTik router
    */
   async testConnection(): Promise<{ success: boolean; responseTime?: number; error?: string }> {
-    const startTime = Date.now()
-    
+    const startTime = Date.now();
     try {
-      // For now, simulate connection test
-      // In a real implementation, you would use a proper RouterOS API client
-      // This could be done using:
-      // 1. Direct socket connection to RouterOS API port
-      // 2. Using a library like 'node-routeros'
-      // 3. Using REST API if enabled on the router
-      
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200))
-      
-      // Simulate 80% success rate
-      const isConnected = Math.random() > 0.2
-      
-      if (isConnected) {
-        const responseTime = Date.now() - startTime
-        return { success: true, responseTime }
-      } else {
-        throw new Error('Connection timeout')
-      }
+      await this.connect();
+      const responseTime = Date.now() - startTime;
+      return { success: true, responseTime };
     } catch (error) {
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
-      }
+      };
+    } finally {
+      await this.disconnect();
     }
   }
 
@@ -121,289 +134,121 @@ export class MikrotikAPI {
    * Get system resources information
    */
   async getSystemResources(): Promise<MikrotikSystemResource> {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 150))
-    
+    await this.connect();
+    const response = await this.client.write('/system/resource/print');
+    await this.disconnect();
+    const resources = response[0];
     return {
-      uptime: `${Math.floor(Math.random() * 30)}d ${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m`,
-      version: '6.49.7',
-      buildTime: 'Dec/10/2023 15:23:45',
-      freeMemory: Math.floor(Math.random() * 1000000) + 500000,
-      totalMemory: 2000000,
-      cpuFrequency: '800MHz',
-      cpuCount: 4,
-      cpuLoad: Math.floor(Math.random() * 80) + 10,
-      freeHddSpace: Math.floor(Math.random() * 1000000) + 1000000,
-      totalHddSpace: 2000000,
-      architectureName: 'arm',
-      boardName: 'RB4011iGS+5HacQ2HnD',
-      platform: 'MikroTik'
-    }
+        ...resources,
+        freeMemory: parseInt(resources.freeMemory, 10),
+        totalMemory: parseInt(resources.totalMemory, 10),
+        cpuLoad: parseInt(resources.cpuLoad, 10),
+        freeHddSpace: parseInt(resources.freeHddSpace, 10),
+        totalHddSpace: parseInt(resources.totalHddSpace, 10),
+        cpuCount: parseInt(resources.cpuCount, 10),
+    };
   }
 
   /**
    * Get hotspot users
    */
   async getHotspotUsers(): Promise<MikrotikHotspotUser[]> {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 200))
-    
-    const mockUsers: MikrotikHotspotUser[] = [
-      {
-        name: 'john_doe',
-        password: 'password123',
-        profile: 'premium-1h',
-        uptime: '1h 15m 30s',
-        bytesIn: 1024000,
-        bytesOut: 5120000,
-        macAddress: '00:11:22:33:44:55',
-        loginBy: 'http-chap',
-        address: '192.168.100.10'
-      },
-      {
-        name: 'jane_smith',
-        password: 'pass456',
-        profile: 'basic-30m',
-        uptime: '25m 45s',
-        bytesIn: 512000,
-        bytesOut: 2048000,
-        macAddress: '00:11:22:33:44:56',
-        loginBy: 'cookie',
-        address: '192.168.100.11'
-      }
-    ]
-    
-    return mockUsers
+    await this.connect();
+    const response = await this.client.write('/ip/hotspot/user/print');
+    await this.disconnect();
+    return response;
   }
 
   /**
    * Add hotspot user
    */
-  async addHotspotUser(user: Omit<MikrotikHotspotUser, 'uptime' | 'bytesIn' | 'bytesOut' | 'packetsIn' | 'packetsOut'>): Promise<boolean> {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 300))
-      
-      // Simulate 90% success rate
-      const success = Math.random() > 0.1
-      
-      if (!success) {
-        throw new Error('Failed to add user to router')
-      }
-      
-      return true
-    } catch (error) {
-      console.error('Error adding hotspot user:', error)
-      throw error
-    }
+  async addHotspotUser(user: Omit<MikrotikHotspotUser, 'uptime' | 'bytesIn' | 'bytesOut' | 'packetsIn' | 'packetsOut'>): Promise<any> {
+    await this.connect();
+    const params = this.formatParams(user);
+    const response = await this.client.write('/ip/hotspot/user/add', params);
+    await this.disconnect();
+    return response;
   }
 
   /**
    * Remove hotspot user
    */
-  async removeHotspotUser(username: string): Promise<boolean> {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 250))
-      
-      // Simulate 90% success rate
-      const success = Math.random() > 0.1
-      
-      if (!success) {
-        throw new Error('Failed to remove user from router')
-      }
-      
-      return true
-    } catch (error) {
-      console.error('Error removing hotspot user:', error)
-      throw error
-    }
+  async removeHotspotUser(id: string): Promise<any> {
+    await this.connect();
+    const response = await this.client.write('/ip/hotspot/user/remove', [`=.id=${id}`]);
+    await this.disconnect();
+    return response;
   }
 
   /**
    * Disconnect hotspot user session
    */
   async disconnectHotspotUser(username: string): Promise<boolean> {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 200))
-      
-      // Simulate 95% success rate
-      const success = Math.random() > 0.05
-      
-      if (!success) {
-        throw new Error('Failed to disconnect user session')
-      }
-      
-      return true
-    } catch (error) {
-      console.error('Error disconnecting hotspot user:', error)
-      throw error
+    await this.connect();
+    const sessions = await this.client.write('/ip/hotspot/active/print', [`?user=${username}`]);
+    if (sessions.length > 0) {
+        const sessionId = sessions[0]['.id'];
+        await this.client.write('/ip/hotspot/active/remove', [`=.id=${sessionId}`]);
     }
+    await this.disconnect();
+    return true;
   }
 
   /**
    * Get hotspot profiles
    */
   async getHotspotProfiles(): Promise<MikrotikHotspotProfile[]> {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 150))
-    
-    const mockProfiles: MikrotikHotspotProfile[] = [
-      {
-        name: 'default',
-        sharedUsers: '1',
-        rateLimit: '0/0',
-        idleTimeout: '00:05:00',
-        keepaliveTimeout: '00:01:00',
-        statusAutorefresh: '00:01:00',
-        addMacCookie: 'yes'
-      },
-      {
-        name: 'premium-1h',
-        sharedUsers: '1',
-        rateLimit: '10M/10M',
-        idleTimeout: '01:00:00',
-        keepaliveTimeout: '00:05:00',
-        statusAutorefresh: '00:02:00',
-        addMacCookie: 'yes'
-      },
-      {
-        name: 'basic-30m',
-        sharedUsers: '1',
-        rateLimit: '5M/5M',
-        idleTimeout: '00:30:00',
-        keepaliveTimeout: '00:02:00',
-        statusAutorefresh: '00:01:00',
-        addMacCookie: 'yes'
-      }
-    ]
-    
-    return mockProfiles
+    await this.connect();
+    const response = await this.client.write('/ip/hotspot/profile/print');
+    await this.disconnect();
+    return response;
   }
 
   /**
    * Get hotspot server configuration
    */
-  async getHotspotServer(): Promise<MikrotikHotspotServer> {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 180))
-    
-    return {
-      name: 'hotspot1',
-      interfaceName: 'ether1',
-      addressPool: 'hs-pool',
-      profile: 'default',
-      idleTimeout: '00:05:00',
-      keepaliveTimeout: '00:01:00',
-      addressesPerMac: '2',
-      macCookieTimeout: '00:03:00'
-    }
+  async getHotspotServer(): Promise<MikrotikHotspotServer[]> {
+    await this.connect();
+    const response = await this.client.write('/ip/hotspot/print');
+    await this.disconnect();
+    return response;
   }
 
   /**
    * Get network interfaces
    */
   async getInterfaces(): Promise<MikrotikInterface[]> {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 220))
-    
-    const mockInterfaces: MikrotikInterface[] = [
-      {
-        name: 'ether1',
-        type: 'ether',
-        mtu: '1500',
-        running: true,
-        disabled: false,
-        rxByte: 1024000,
-        txByte: 5120000,
-        rxPacket: 1000,
-        txPacket: 2000,
-        rxError: 0,
-        txError: 0,
-        rxDrop: 5,
-        txDrop: 2
-      },
-      {
-        name: 'ether2',
-        type: 'ether',
-        mtu: '1500',
-        running: true,
-        disabled: false,
-        rxByte: 512000,
-        txByte: 1024000,
-        rxPacket: 500,
-        txPacket: 1000,
-        rxError: 0,
-        txError: 0,
-        rxDrop: 1,
-        txDrop: 0
-      },
-      {
-        name: 'wlan1',
-        type: 'wlan',
-        mtu: '1500',
-        l2mtu: '2290',
-        running: true,
-        disabled: false,
-        rxByte: 2048000,
-        txByte: 1024000,
-        rxPacket: 1500,
-        txPacket: 800,
-        rxError: 2,
-        txError: 1,
-        rxDrop: 10,
-        txDrop: 5
-      }
-    ]
-    
-    return mockInterfaces
+    await this.connect();
+    const response = await this.client.write('/interface/print');
+    await this.disconnect();
+    return response.map((iface: any) => ({
+        ...iface,
+        running: iface.running === 'true',
+        disabled: iface.disabled === 'true',
+    }));
   }
 
   /**
    * Create or update hotspot profile
    */
-  async setHotspotProfile(profile: Partial<MikrotikHotspotProfile>): Promise<boolean> {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 350))
-      
-      // Simulate 85% success rate
-      const success = Math.random() > 0.15
-      
-      if (!success) {
-        throw new Error('Failed to set hotspot profile')
-      }
-      
-      return true
-    } catch (error) {
-      console.error('Error setting hotspot profile:', error)
-      throw error
-    }
+  async setHotspotProfile(profile: Partial<MikrotikHotspotProfile>): Promise<any> {
+    await this.connect();
+    const params = this.formatParams(profile);
+    const command = profile['.id'] ? '/ip/hotspot/profile/set' : '/ip/hotspot/profile/add';
+    if(profile['.id']) params.push(`=.id=${profile['.id']}`);
+    const response = await this.client.write(command, params);
+    await this.disconnect();
+    return response;
   }
 
   /**
    * Execute arbitrary command (for advanced usage)
    */
-  async executeCommand(command: string, params?: Record<string, string>): Promise<any> {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 300))
-      
-      // Return mock response based on command
-      if (command === '/ip/hotspot/user/print') {
-        return await this.getHotspotUsers()
-      } else if (command === '/system/resource/print') {
-        return await this.getSystemResources()
-      } else if (command === '/interface/print') {
-        return await this.getInterfaces()
-      }
-      
-      return { success: true, message: 'Command executed' }
-    } catch (error) {
-      console.error('Error executing command:', error)
-      throw error
-    }
+  async executeCommand(command: string, params?: string[]): Promise<any> {
+    await this.connect();
+    const response = await this.client.write(command, params);
+    await this.disconnect();
+    return response;
   }
 }
 

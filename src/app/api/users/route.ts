@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
+import bcrypt from 'bcryptjs'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -72,10 +74,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const hashedPassword = await bcrypt.hash(password, 12)
+
     const user = await db.hotspotUser.create({
       data: {
         username,
-        password,
+        password: hashedPassword,
         name,
         email,
         phone,

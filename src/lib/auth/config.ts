@@ -12,7 +12,9 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        console.log("--- Authorize function called ---");
         if (!credentials?.email || !credentials?.password) {
+          console.log("Missing credentials");
           return null
         }
 
@@ -26,14 +28,23 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        // For demo purposes, we'll use plain password comparison
-        // In production, you should use proper password hashing
-        const isPasswordValid = credentials.password === "admin123" || 
-                               await bcrypt.compare(credentials.password, user.password || "")
+        console.log("Authorizing user:", credentials.email);
+        if (!user.password) {
+          console.log("User has no password set");
+          return null;
+        }
+
+        console.log("Password from credentials:", credentials.password);
+        console.log("Password hash from database:", user.password);
+
+        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
         if (!isPasswordValid) {
+          console.log("Invalid password");
           return null
         }
+
+        console.log("Password is valid");
 
         return {
           id: user.id,
@@ -66,5 +77,6 @@ export const authOptions: NextAuthOptions = {
     signIn: "/auth/signin",
     error: "/auth/error"
   },
-  secret: process.env.NEXTAUTH_SECRET || "your-secret-key"
+  secret: process.env.NEXTAUTH_SECRET || "your-secret-key",
+  debug: process.env.NODE_ENV === "development",
 }

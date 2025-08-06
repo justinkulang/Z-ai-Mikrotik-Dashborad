@@ -25,7 +25,7 @@ async function seed() {
         name: 'Main Router',
         ipAddress: '192.168.1.1',
         username: 'admin',
-        password: 'admin',
+        password: await bcrypt.hash('admin', 12),
         apiPort: 8728,
         isActive: true
       }
@@ -36,7 +36,7 @@ async function seed() {
         name: 'Branch Router',
         ipAddress: '192.168.2.1',
         username: 'admin',
-        password: 'admin',
+        password: await bcrypt.hash('admin', 12),
         apiPort: 8728,
         isActive: true
       }
@@ -135,7 +135,7 @@ async function seed() {
     const user1 = await db.hotspotUser.create({
       data: {
         username: 'john_doe',
-        password: 'password123',
+        password: await bcrypt.hash('password123', 12),
         name: 'John Doe',
         email: 'john@example.com',
         phone: '+1234567890',
@@ -148,7 +148,7 @@ async function seed() {
     const user2 = await db.hotspotUser.create({
       data: {
         username: 'jane_smith',
-        password: 'password123',
+        password: await bcrypt.hash('password123', 12),
         name: 'Jane Smith',
         email: 'jane@example.com',
         phone: '+1234567891',
@@ -161,7 +161,7 @@ async function seed() {
     const user3 = await db.hotspotUser.create({
       data: {
         username: 'mike_wilson',
-        password: 'password123',
+        password: await bcrypt.hash('password123', 12),
         name: 'Mike Wilson',
         email: 'mike@example.com',
         phone: '+1234567892',

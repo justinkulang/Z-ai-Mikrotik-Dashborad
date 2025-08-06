@@ -87,6 +87,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
+import bcrypt from 'bcryptjs'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -111,12 +113,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const hashedPassword = await bcrypt.hash(password, 12)
+
     const router = await db.router.create({
       data: {
         name,
         ipAddress,
         username,
-        password,
+        password: hashedPassword,
         apiPort: apiPort || 8728,
         isActive: isActive ?? true
       }
