@@ -24,7 +24,10 @@ export const authOptions: NextAuthOptions = {
           }
         })
 
+        console.log("User found:", user);
+
         if (!user) {
+          console.log("User not found");
           return null
         }
 
@@ -37,11 +40,16 @@ export const authOptions: NextAuthOptions = {
         console.log("Password from credentials:", credentials.password);
         console.log("Password hash from database:", user.password);
 
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+        try {
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
-        if (!isPasswordValid) {
-          console.log("Invalid password");
-          return null
+          if (!isPasswordValid) {
+            console.log("Invalid password");
+            return null
+          }
+        } catch (error) {
+          console.error("Error comparing passwords:", error);
+          return null;
         }
 
         console.log("Password is valid");
